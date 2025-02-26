@@ -1,236 +1,74 @@
-import { useState, useCallback, useRef } from 'react'
-import { 
-  DndContext, 
-  DragEndEvent, 
-  useDroppable,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  DragStartEvent,
-  DragOverlay,
-  MeasuringStrategy,
-  closestCenter,
-  pointerWithin,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  arrayMove,
-  verticalListSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable'
-import { Pause, Play, Plus, Users } from 'lucide-react'
+import { useState } from 'react';
+import { Droppable, Draggable, DragDropContext, DropResult } from '@hello-pangea/dnd';
+import { Pause, Play, Plus, Users } from 'lucide-react';
 
-interface RenderBlock {
-  id: string
-  sceneName: string
-  startFrame: number
-  endFrame: number
-  assignedTo: string | null
-  color: string
+interface Block {
+  id: string;
+  startFrame: number;
+  endFrame: number;
 }
 
-interface RenderClient {
-  id: string
-  name: string
-  status: 'idle' | 'rendering' | 'paused'
-  blocks: RenderBlock[]
-}
-
-const colors = [
-  'bg-red-500',
-  'bg-blue-500',
-  'bg-green-500',
-  'bg-yellow-500',
-  'bg-purple-500',
-  'bg-pink-500',
-]
-
-function SortableBlock({ block, totalFrames, isDragging = false }: { 
-  block: RenderBlock; 
-  totalFrames: number;
-  isDragging?: boolean;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition
-  } = useSortable({ id: block.id })
-
-  const width = Math.max(((block.endFrame - block.startFrame + 1) / totalFrames) * 100, 10)
-  
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    transition,
-    width: `${width}%`,
-  } : {
-    width: `${width}%`,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className={`
-        ${block.color} 
-        p-2 
-        rounded 
-        cursor-move 
-        min-w-[100px] 
-        mb-2 
-        touch-manipulation 
-        transition-colors
-        duration-200
-        ${isDragging ? 'opacity-50' : 'opacity-100'}
-      `}
-    >
-      <div className="font-medium truncate">{block.sceneName}</div>
-      <div className="text-sm truncate">
-        {block.startFrame} - {block.endFrame}
-      </div>
-    </div>
-  )
-}
-
-function DroppableZone({ client, children }: { client: RenderClient, children: React.ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: client.id,
-    data: {
-      type: 'client',
-      client,
-    },
-  })
-
-  return (
-    <div 
-      ref={setNodeRef} 
-      className={`
-        p-4
-        rounded-lg 
-        transition-colors 
-        duration-200
-        min-h-[120px]
-        ${isOver ? 'bg-blue-500/20' : 'bg-gray-100/5'}
-      `}
-    >
-      {children}
-    </div>
-  )
+interface RenderNode {
+  id: string;
+  name: string;
+  status: 'idle' | 'rendering' | 'paused';
+  blocks: Block[];
 }
 
 const RenderUIAdvanced = () => {
-  const formRef = useRef<HTMLFormElement>(null)
-  const [clients, setClients] = useState<RenderClient[]>([
-    { id: '1', name: 'Render Node 1', status: 'idle', blocks: [] },
-    { id: '2', name: 'Render Node 2', status: 'idle', blocks: [] },
-    { id: '3', name: 'Render Node 3', status: 'idle', blocks: [] },
-  ])
+  const [newBlocks, setNewBlocks] = useState<Block[]>([]);
+  const [renderNodes, setRenderNodes] = useState<RenderNode[]>([
+    { id: 'node-1', name: 'Render Node 1', status: 'idle', blocks: [] },
+    { id: 'node-2', name: 'Render Node 2', status: 'idle', blocks: [] },
+    { id: 'node-3', name: 'Render Node 3', status: 'idle', blocks: [] },
+  ]);
 
-  const [blocks, setBlocks] = useState<RenderBlock[]>([
-    {
-      id: '1',
-      sceneName: 'Opening Scene',
-      startFrame: 1,
-      endFrame: 100,
-      assignedTo: null,
-      color: colors[0],
-    },
-    {
-      id: '2',
-      sceneName: 'Main Action',
-      startFrame: 101,
-      endFrame: 300,
-      assignedTo: null,
-      color: colors[1],
-    },
-  ])
+  const handleCreateBlock = (block: Block) => {
+    setNewBlocks(prev => [...prev, block]);
+  };
 
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [activeContainerId, setActiveContainerId] = useState<string | null>(null)
-  const [newBlock, setNewBlock] = useState({
-    sceneName: '',
-    startFrame: 0,
-    endFrame: 0,
-  })
+  const handleDragEnd = (result: DropResult) => {
+    const { source, destination } = result;
+    
+    if (!destination) return;
 
-  const [newClientName, setNewClientName] = useState('')
-  
-  const mouseSensor = useSensor(MouseSensor, {
-    activationConstraint: {
-      distance: 5,
-    },
-  })
-  
-  const touchSensor = useSensor(TouchSensor, {
-    activationConstraint: {
-      delay: 100,
-      tolerance: 5,
-    },
-  })
+    // Create copies of current state to work with
+    let newBlocksCopy = [...newBlocks];
+    let renderNodesCopy = renderNodes.map(node => ({
+      ...node,
+      blocks: [...node.blocks]
+    }));
 
-  const sensors = useSensors(mouseSensor, touchSensor)
-  const totalFrames = Math.max(...blocks.map(b => b.endFrame), 1)
+    // Get the item being dragged
+    let movedItem: Block;
 
-  const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event
-    setActiveId(active.id as string)
-    const activeBlock = blocks.find(b => b.id === active.id)
-    setActiveContainerId(activeBlock?.assignedTo || 'unassigned')
-  }
-
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event
-    setActiveId(null)
-    setActiveContainerId(null)
-
-    if (!over) return
-
-    const activeBlock = blocks.find(b => b.id === active.id)
-    if (!activeBlock) return
-
-    const overId = over.id
-
-    // If dropping onto a client
-    if (clients.some(c => c.id === overId)) {
-      setBlocks(prevBlocks => prevBlocks.map(block => {
-        if (block.id === active.id) {
-          return { ...block, assignedTo: overId as string }
-        }
-        return block
-      }))
-      return
+    // Remove from source
+    if (source.droppableId === 'new-blocks') {
+      [movedItem] = newBlocksCopy.splice(source.index, 1);
+    } else {
+      const sourceNode = renderNodesCopy.find(n => n.id === source.droppableId);
+      if (sourceNode) {
+        [movedItem] = sourceNode.blocks.splice(source.index, 1);
+      }
     }
 
-    // If dropping onto unassigned area
-    if (overId === 'unassigned') {
-      setBlocks(prevBlocks => prevBlocks.map(block => {
-        if (block.id === active.id) {
-          return { ...block, assignedTo: null }
-        }
-        return block
-      }))
-      return
+    // Add to destination
+    if (destination.droppableId === 'new-blocks') {
+      newBlocksCopy.splice(destination.index, 0, movedItem!);
+    } else {
+      const destNode = renderNodesCopy.find(n => n.id === destination.droppableId);
+      if (destNode) {
+        destNode.blocks.splice(destination.index, 0, movedItem!);
+      }
     }
 
-    // If reordering within the same container
-    const overBlock = blocks.find(b => b.id === overId)
-    if (overBlock && activeBlock.assignedTo === overBlock.assignedTo) {
-      setBlocks(prevBlocks => {
-        const oldIndex = prevBlocks.findIndex(b => b.id === active.id)
-        const newIndex = prevBlocks.findIndex(b => b.id === overId)
-        return arrayMove(prevBlocks, oldIndex, newIndex)
-      })
-    }
-  }, [blocks, clients])
-
-  const activeBlock = activeId ? blocks.find(block => block.id === activeId) : null
+    // Update state
+    setNewBlocks(newBlocksCopy);
+    setRenderNodes(renderNodesCopy);
+  };
 
   const toggleRendering = (clientId: string) => {
-    setClients(clients.map(client => {
+    setRenderNodes(renderNodes.map(client => {
       if (client.id === clientId) {
         return {
           ...client,
@@ -241,82 +79,40 @@ const RenderUIAdvanced = () => {
     }))
   }
 
-  const addNewBlock = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (newBlock.sceneName && newBlock.endFrame > newBlock.startFrame) {
-      setBlocks(prevBlocks => [
-        ...prevBlocks,
-        {
-          id: Date.now().toString(),
-          ...newBlock,
-          assignedTo: null,
-          color: colors[prevBlocks.length % colors.length],
-        },
-      ])
-      if (formRef.current) {
-        formRef.current.reset()
-      }
-      setNewBlock({
-        sceneName: '',
-        startFrame: 0,
-        endFrame: 0,
-      })
-    }
-  }
-
-  const addNewClient = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (newClientName.trim()) {
-      setClients(prevClients => [
-        ...prevClients,
-        {
-          id: Date.now().toString(),
-          name: newClientName,
-          status: 'idle',
-          blocks: [],
-        },
-      ])
-      setNewClientName('')
-    }
-  }
-
   return (
-    <DndContext 
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      measuring={{
-        droppable: {
-          strategy: MeasuringStrategy.Always
-        },
-      }}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
+    <DragDropContext onDragEnd={handleDragEnd}>
       <div className="p-6">
         <div className="flex flex-col gap-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Advanced Render Manager</h2>
-            <form ref={formRef} onSubmit={addNewBlock} className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Scene Name"
-                className="bg-gray-100 dark:bg-[#333] border rounded p-2"
-                value={newBlock.sceneName}
-                onChange={(e) => setNewBlock(prev => ({ ...prev, sceneName: e.target.value }))}
-              />
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const startFrame = parseInt((e.currentTarget.elements.namedItem('startFrame') as HTMLInputElement).value);
+              const endFrame = parseInt((e.currentTarget.elements.namedItem('endFrame') as HTMLInputElement).value);
+              if (startFrame >= 0 && endFrame > startFrame) {
+                handleCreateBlock({
+                  id: `block-${Date.now()}`,
+                  startFrame,
+                  endFrame
+                });
+                e.currentTarget.reset();
+              }
+            }} className="flex gap-2">
               <input
                 type="number"
+                name="startFrame"
                 placeholder="Start Frame"
                 className="bg-gray-100 dark:bg-[#333] border rounded p-2 w-24"
-                value={newBlock.startFrame || ''}
-                onChange={(e) => setNewBlock(prev => ({ ...prev, startFrame: parseInt(e.target.value) }))}
+                min="0"
+                required
               />
               <input
                 type="number"
+                name="endFrame"
                 placeholder="End Frame"
                 className="bg-gray-100 dark:bg-[#333] border rounded p-2 w-24"
-                value={newBlock.endFrame || ''}
-                onChange={(e) => setNewBlock(prev => ({ ...prev, endFrame: parseInt(e.target.value) }))}
+                min="0"
+                required
               />
               <button
                 type="submit"
@@ -330,34 +126,35 @@ const RenderUIAdvanced = () => {
           <div className="grid grid-cols-5 gap-4">
             <div className="col-span-1 bg-white dark:bg-[#2a2a2a] p-4 rounded-lg shadow">
               <h3 className="font-semibold mb-4">Unassigned Blocks</h3>
-              <div
-                ref={useDroppable({ id: 'unassigned' }).setNodeRef}
-                className={`min-h-[200px] p-2 rounded ${
-                  useDroppable({ id: 'unassigned' }).isOver ? 'bg-blue-500/20' : ''
-                }`}
-              >
-                <SortableContext 
-                  items={blocks.filter(block => !block.assignedTo).map(b => b.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {blocks
-                    .filter(block => !block.assignedTo)
-                    .map(block => (
-                      <SortableBlock key={block.id} block={block} totalFrames={totalFrames} />
-                    ))
-                  }
-                </SortableContext>
-              </div>
+              <DroppableSection
+                id="new-blocks"
+                title="New Blocks"
+                blocks={newBlocks}
+              />
             </div>
 
             <div className="col-span-4 space-y-4">
-              <form onSubmit={addNewClient} className="flex gap-2 items-center">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const newClientName = (e.currentTarget.elements.namedItem('newClientName') as HTMLInputElement).value;
+                if (newClientName.trim()) {
+                  setRenderNodes(prevClients => [
+                    ...prevClients,
+                    {
+                      id: `node-${Date.now()}`,
+                      name: newClientName,
+                      status: 'idle',
+                      blocks: [],
+                    },
+                  ]);
+                  e.currentTarget.reset();
+                }
+              }} className="flex gap-2 items-center">
                 <input
                   type="text"
+                  name="newClientName"
                   placeholder="New Client Name"
                   className="flex-1 bg-gray-100 dark:bg-[#333] border rounded p-2"
-                  value={newClientName}
-                  onChange={(e) => setNewClientName(e.target.value)}
                 />
                 <button
                   type="submit"
@@ -367,7 +164,7 @@ const RenderUIAdvanced = () => {
                 </button>
               </form>
               
-              {clients.map(client => (
+              {renderNodes.map(client => (
                 <div
                   key={client.id}
                   className="bg-white dark:bg-[#2a2a2a] p-4 rounded-lg shadow"
@@ -385,39 +182,81 @@ const RenderUIAdvanced = () => {
                       )}
                     </button>
                   </div>
-                  <DroppableZone client={client}>
-                    <SortableContext 
-                      items={blocks.filter(block => block.assignedTo === client.id).map(b => b.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="flex gap-2 flex-wrap">
-                        {blocks
-                          .filter(block => block.assignedTo === client.id)
-                          .map(block => (
-                            <SortableBlock key={block.id} block={block} totalFrames={totalFrames} />
-                          ))
-                        }
-                      </div>
-                    </SortableContext>
-                  </DroppableZone>
+                  <DroppableSection
+                    id={client.id}
+                    title={client.name}
+                    blocks={client.blocks}
+                  />
                 </div>
               ))}
             </div>
           </div>
         </div>
       </div>
-      
-      <DragOverlay>
-        {activeId && activeBlock && (
-          <SortableBlock 
-            block={activeBlock} 
-            totalFrames={totalFrames} 
-            isDragging={true}
-          />
-        )}
-      </DragOverlay>
-    </DndContext>
-  )
-}
+    </DragDropContext>
+  );
+};
 
-export default RenderUIAdvanced
+export default RenderUIAdvanced;
+
+const DroppableSection = ({ id, title, blocks }: { id: string; title: string; blocks: Block[] }) => {
+  return (
+    <Droppable droppableId={id}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.droppableProps}
+          className={`
+            min-h-[200px] min-w-[320px]
+            transition-colors duration-200
+            ${snapshot.isDraggingOver ? 'bg-blue-50' : ''}
+            rounded-lg
+          `}
+        >
+          <div className="flex flex-wrap gap-2">
+            {blocks.map((block, index) => (
+              <Block key={block.id} block={block} index={index} />
+            ))}
+          </div>
+          {provided.placeholder}
+        </div>
+      )}
+    </Droppable>
+  );
+};
+
+const Block = ({ block, index }: { block: Block; index: number }) => {
+  const duration = block.endFrame - block.startFrame;
+  const width = Math.min(Math.max(duration / 10, 100), 300); // Scale width based on duration
+
+  return (
+    <Draggable draggableId={block.id} index={index}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          className={`
+            p-3 rounded-lg mb-2
+            ${snapshot.isDragging ? 'bg-blue-100 shadow-lg' : 'bg-white'}
+            border border-gray-200
+            transition-all duration-200
+            hover:shadow-md
+            cursor-grab active:cursor-grabbing
+          `}
+          style={{
+            width: `${width}px`,
+            ...provided.draggableProps.style,
+          }}
+        >
+          <div className="text-sm font-medium text-gray-700">
+            {block.startFrame} - {block.endFrame}
+          </div>
+          <div className="text-xs text-gray-500">
+            Frames: {duration}
+          </div>
+        </div>
+      )}
+    </Draggable>
+  );
+};
