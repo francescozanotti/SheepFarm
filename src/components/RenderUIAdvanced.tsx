@@ -319,7 +319,10 @@ const RenderUIAdvanced = () => {
               ref={provided.innerRef}
               {...provided.droppableProps}
               className="fixed bottom-0 right-0 w-32 h-32"
-            />
+            >
+              {/* Add the placeholder */}
+              {provided.placeholder}
+            </div>
           )}
         </Droppable>
       </div>
