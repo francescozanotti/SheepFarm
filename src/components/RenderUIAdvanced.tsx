@@ -1,7 +1,7 @@
-import { useState, useCallback, useRef } from 'react';
-import {
-  DndContext,
-  DragEndEvent,
+import { useState, useCallback, useRef } from 'react'
+import { 
+  DndContext, 
+  DragEndEvent, 
   useDroppable,
   MouseSensor,
   TouchSensor,
@@ -12,29 +12,29 @@ import {
   MeasuringStrategy,
   closestCenter,
   pointerWithin,
-} from '@dnd-kit/core';
+} from '@dnd-kit/core'
 import {
   SortableContext,
   arrayMove,
   verticalListSortingStrategy,
   useSortable,
-} from '@dnd-kit/sortable';
-import { Pause, Play, Plus, Users } from 'lucide-react';
+} from '@dnd-kit/sortable'
+import { Pause, Play, Plus, Users } from 'lucide-react'
 
 interface RenderBlock {
-  id: string;
-  sceneName: string;
-  startFrame: number;
-  endFrame: number;
-  assignedTo: string | null;
-  color: string;
+  id: string
+  sceneName: string
+  startFrame: number
+  endFrame: number
+  assignedTo: string | null
+  color: string
 }
 
 interface RenderClient {
-  id: string;
-  name: string;
-  status: 'idle' | 'rendering' | 'paused';
-  blocks: RenderBlock[];
+  id: string
+  name: string
+  status: 'idle' | 'rendering' | 'paused'
+  blocks: RenderBlock[]
 }
 
 const colors = [
@@ -44,10 +44,10 @@ const colors = [
   'bg-yellow-500',
   'bg-purple-500',
   'bg-pink-500',
-];
+]
 
-function SortableBlock({ block, totalFrames, isDragging = false }: {
-  block: RenderBlock;
+function SortableBlock({ block, totalFrames, isDragging = false }: { 
+  block: RenderBlock; 
   totalFrames: number;
   isDragging?: boolean;
 }) {
@@ -57,17 +57,17 @@ function SortableBlock({ block, totalFrames, isDragging = false }: {
     setNodeRef,
     transform,
     transition
-  } = useSortable({ id: block.id });
+  } = useSortable({ id: block.id })
 
-  const width = Math.max(((block.endFrame - block.startFrame + 1) / totalFrames) * 100, 10);
-
+  const width = Math.max(((block.endFrame - block.startFrame + 1) / totalFrames) * 100, 10)
+  
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
     transition,
     width: `${width}%`,
   } : {
     width: `${width}%`,
-  };
+  }
 
   return (
     <div
@@ -93,7 +93,7 @@ function SortableBlock({ block, totalFrames, isDragging = false }: {
         {block.startFrame} - {block.endFrame}
       </div>
     </div>
-  );
+  )
 }
 
 function DroppableZone({ client, children }: { client: RenderClient, children: React.ReactNode }) {
@@ -103,11 +103,11 @@ function DroppableZone({ client, children }: { client: RenderClient, children: R
       type: 'client',
       client,
     },
-  });
+  })
 
   return (
-    <div
-      ref={setNodeRef}
+    <div 
+      ref={setNodeRef} 
       className={`
         p-4
         rounded-lg 
@@ -119,16 +119,16 @@ function DroppableZone({ client, children }: { client: RenderClient, children: R
     >
       {children}
     </div>
-  );
+  )
 }
 
 const RenderUIAdvanced = () => {
-  const formRef = useRef<HTMLFormElement>(null);
+  const formRef = useRef<HTMLFormElement>(null)
   const [clients, setClients] = useState<RenderClient[]>([
     { id: '1', name: 'Render Node 1', status: 'idle', blocks: [] },
     { id: '2', name: 'Render Node 2', status: 'idle', blocks: [] },
     { id: '3', name: 'Render Node 3', status: 'idle', blocks: [] },
-  ]);
+  ])
 
   const [blocks, setBlocks] = useState<RenderBlock[]>([
     {
@@ -147,87 +147,87 @@ const RenderUIAdvanced = () => {
       assignedTo: null,
       color: colors[1],
     },
-  ]);
+  ])
 
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeContainerId, setActiveContainerId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeContainerId, setActiveContainerId] = useState<string | null>(null)
   const [newBlock, setNewBlock] = useState({
     sceneName: '',
     startFrame: 0,
     endFrame: 0,
-  });
+  })
 
-  const [newClientName, setNewClientName] = useState('');
-
+  const [newClientName, setNewClientName] = useState('')
+  
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
       distance: 5,
     },
-  });
-
+  })
+  
   const touchSensor = useSensor(TouchSensor, {
     activationConstraint: {
       delay: 100,
       tolerance: 5,
     },
-  });
+  })
 
-  const sensors = useSensors(mouseSensor, touchSensor);
-  const totalFrames = Math.max(...blocks.map(b => b.endFrame), 1);
+  const sensors = useSensors(mouseSensor, touchSensor)
+  const totalFrames = Math.max(...blocks.map(b => b.endFrame), 1)
 
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    setActiveId(active.id as string);
-    const activeBlock = blocks.find(b => b.id === active.id);
-    setActiveContainerId(activeBlock?.assignedTo || 'unassigned');
-  };
+    const { active } = event
+    setActiveId(active.id as string)
+    const activeBlock = blocks.find(b => b.id === active.id)
+    setActiveContainerId(activeBlock?.assignedTo || 'unassigned')
+  }
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-    setActiveContainerId(null);
+    const { active, over } = event
+    setActiveId(null)
+    setActiveContainerId(null)
 
-    if (!over) return;
+    if (!over) return
 
-    const activeBlock = blocks.find(b => b.id === active.id);
-    if (!activeBlock) return;
+    const activeBlock = blocks.find(b => b.id === active.id)
+    if (!activeBlock) return
 
-    const overId = over.id;
+    const overId = over.id
 
     // If dropping onto a client
     if (clients.some(c => c.id === overId)) {
       setBlocks(prevBlocks => prevBlocks.map(block => {
         if (block.id === active.id) {
-          return { ...block, assignedTo: overId as string };
+          return { ...block, assignedTo: overId as string }
         }
-        return block;
-      }));
-      return;
+        return block
+      }))
+      return
     }
 
     // If dropping onto unassigned area
     if (overId === 'unassigned') {
       setBlocks(prevBlocks => prevBlocks.map(block => {
         if (block.id === active.id) {
-          return { ...block, assignedTo: null };
+          return { ...block, assignedTo: null }
         }
-        return block;
-      }));
-      return;
+        return block
+      }))
+      return
     }
 
     // If reordering within the same container
-    const overBlock = blocks.find(b => b.id === overId);
+    const overBlock = blocks.find(b => b.id === overId)
     if (overBlock && activeBlock.assignedTo === overBlock.assignedTo) {
       setBlocks(prevBlocks => {
-        const oldIndex = prevBlocks.findIndex(b => b.id === active.id);
-        const newIndex = prevBlocks.findIndex(b => b.id === overId);
-        return arrayMove(prevBlocks, oldIndex, newIndex);
-      });
+        const oldIndex = prevBlocks.findIndex(b => b.id === active.id)
+        const newIndex = prevBlocks.findIndex(b => b.id === overId)
+        return arrayMove(prevBlocks, oldIndex, newIndex)
+      })
     }
-  }, [blocks, clients]);
+  }, [blocks, clients])
 
-  const activeBlock = activeId ? blocks.find(block => block.id === activeId) : null;
+  const activeBlock = activeId ? blocks.find(block => block.id === activeId) : null
 
   const toggleRendering = (clientId: string) => {
     setClients(clients.map(client => {
@@ -235,14 +235,14 @@ const RenderUIAdvanced = () => {
         return {
           ...client,
           status: client.status === 'rendering' ? 'paused' : 'rendering'
-        };
+        }
       }
-      return client;
-    }));
-  };
+      return client
+    }))
+  }
 
   const addNewBlock = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (newBlock.sceneName && newBlock.endFrame > newBlock.startFrame) {
       setBlocks(prevBlocks => [
         ...prevBlocks,
@@ -252,20 +252,20 @@ const RenderUIAdvanced = () => {
           assignedTo: null,
           color: colors[prevBlocks.length % colors.length],
         },
-      ]);
+      ])
       if (formRef.current) {
-        formRef.current.reset();
+        formRef.current.reset()
       }
       setNewBlock({
         sceneName: '',
         startFrame: 0,
         endFrame: 0,
-      });
+      })
     }
-  };
+  }
 
   const addNewClient = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (newClientName.trim()) {
       setClients(prevClients => [
         ...prevClients,
@@ -275,13 +275,13 @@ const RenderUIAdvanced = () => {
           status: 'idle',
           blocks: [],
         },
-      ]);
-      setNewClientName('');
+      ])
+      setNewClientName('')
     }
-  };
+  }
 
   return (
-    <DndContext
+    <DndContext 
       sensors={sensors}
       collisionDetection={closestCenter}
       measuring={{
@@ -336,7 +336,7 @@ const RenderUIAdvanced = () => {
                   useDroppable({ id: 'unassigned' }).isOver ? 'bg-blue-500/20' : ''
                 }`}
               >
-                <SortableContext
+                <SortableContext 
                   items={blocks.filter(block => !block.assignedTo).map(b => b.id)}
                   strategy={verticalListSortingStrategy}
                 >
@@ -366,7 +366,7 @@ const RenderUIAdvanced = () => {
                   <Users className="h-5 w-5" />
                 </button>
               </form>
-
+              
               {clients.map(client => (
                 <div
                   key={client.id}
@@ -386,7 +386,7 @@ const RenderUIAdvanced = () => {
                     </button>
                   </div>
                   <DroppableZone client={client}>
-                    <SortableContext
+                    <SortableContext 
                       items={blocks.filter(block => block.assignedTo === client.id).map(b => b.id)}
                       strategy={verticalListSortingStrategy}
                     >
@@ -406,18 +406,18 @@ const RenderUIAdvanced = () => {
           </div>
         </div>
       </div>
-
+      
       <DragOverlay>
         {activeId && activeBlock && (
-          <SortableBlock
-            block={activeBlock}
-            totalFrames={totalFrames}
+          <SortableBlock 
+            block={activeBlock} 
+            totalFrames={totalFrames} 
             isDragging={true}
           />
         )}
       </DragOverlay>
     </DndContext>
-  );
-};
+  )
+}
 
-export default RenderUIAdvanced;
+export default RenderUIAdvanced
