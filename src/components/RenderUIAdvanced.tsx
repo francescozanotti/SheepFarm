@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DragDropContext, DropResult, Draggable, Droppable } from '@hello-pangea/dnd';
 import { Pause, Play, Plus, Users, Trash2 } from 'lucide-react';
+import TrashIcon from './TrashIcon'; // Import the new component
 
 interface Block {
   id: string;
@@ -299,18 +300,8 @@ const RenderUIAdvanced = () => {
           </div>
         </div>
 
-        {/* Trash Icon */}
-        <div
-          id="trash-icon"
-          className="fixed bottom-6 right-6 p-3 rounded-full bg-red-500/20 transition-all duration-200"
-          style={{
-            transform: `scale(${trashScale})`,
-          }}
-        >
-          <Trash2
-            className={`h-6 w-6 ${isDraggingToTrash ? 'text-red-500' : 'text-gray-500'}`}
-          />
-        </div>
+        {/* Use the new TrashIcon here */}
+        <TrashIcon />
 
         {/* Trash Drop Zone */}
         <Droppable droppableId="trash">
