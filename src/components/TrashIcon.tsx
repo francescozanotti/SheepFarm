@@ -18,9 +18,18 @@ const TrashIcon = () => {
         Math.pow(event.clientY - trashCenterY, 2)
       );
 
-      const maxDistance = 150;
-      const scale = distance < maxDistance ? Math.max(1, 1.5 - distance / maxDistance) : 1;
-      setTrashScale(scale);
+      const minDistance = 150; // NEW MIN DISTANCE
+      const maxDistance = 350; // NEW MAX DISTANCE
+
+      if (distance <= maxDistance && distance >= minDistance) {
+        // Scale factor: max at 150px, min at 350px
+        const scale = 1 + (2 - 1) * (1 - (distance - minDistance) / (maxDistance - minDistance));
+        setTrashScale(scale);
+      } else if (distance < minDistance) {
+        setTrashScale(2); // Max scale at min distance
+      } else {
+        setTrashScale(1); // Default size beyond max distance
+      }
     };
 
     window.addEventListener('mousemove', handleMouseMove);

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { DragDropContext, DropResult, Draggable, Droppable } from '@hello-pangea/dnd';
-import { Pause, Play, Plus, Users, Trash2 } from 'lucide-react';
+import { Pause, Play, Plus } from 'lucide-react';
 import TrashIcon from './TrashIcon'; // Import the new component
 
 interface Block {
@@ -180,7 +180,7 @@ const RenderUIAdvanced = () => {
                 const startFrame = parseInt(formData.get('startFrame') as string);
                 const endFrame = parseInt(formData.get('endFrame') as string);
 
-                if (sceneName && startFrame >= 0 && endFrame > startFrame) {
+                if (sceneName && startFrame >= 0 && endFrame >= startFrame) {
                   handleCreateBlock({ sceneName, startFrame, endFrame });
                 }
               }}
@@ -199,6 +199,7 @@ const RenderUIAdvanced = () => {
                 placeholder="Start Frame"
                 className="bg-gray-100 dark:bg-[#333] border rounded p-2 w-24"
                 min="0"
+                defaultValue='1'
                 required
               />
               <input
@@ -207,6 +208,7 @@ const RenderUIAdvanced = () => {
                 placeholder="End Frame"
                 className="bg-gray-100 dark:bg-[#333] border rounded p-2 w-24"
                 min="0"
+                defaultValue='1'
                 required
               />
               <button
