@@ -1,0 +1,315 @@
+//ClientsList.tsx, from SheepFarm app frontend
+import { useEffect, useState } from 'react'
+import { Circle } from 'lucide-react'
+
+interface Client {
+  id: string
+  name: string
+  status: 'online' | 'offline' | 'rendering'
+  isMain: boolean
+}
+
+const ClientsList = () => {
+  const [clients, setClients] = useState<Client[]>([])
+
+  useEffect(() => {
+    // Simulate clients data
+    const mockClients: Client[] = [
+      { id: '1', name: 'Main Workstation', status: 'online', isMain: true },
+      { id: '2', name: 'Render Node 1', status: 'rendering', isMain: false },
+      { id: '3', name: 'Render Node 2', status: 'online', isMain: false },
+      { id: '4', name: 'Render Node 3', status: 'offline', isMain: false },
+    ]
+    setClients(mockClients)
+  }, [])
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'online':
+        return 'text-green-500'
+      case 'rendering':
+        return 'text-blue-500'
+      default:
+        return 'text-gray-500'
+    }
+  }
+
+  return (
+    <div className="p-6">
+      <h2 className="text-2xl font-bold mb-6">Connected Clients</h2>
+      <div className="grid gap-4">
+        {clients.map((client) => (
+          <div
+            key={client.id}
+            className="bg-white dark:bg-[#2a2a2a] p-4 rounded-lg flex items-center justify-between shadow-sm"
+          >
+            <div className="flex items-center space-x-4">
+              <Circle
+                className={h-3 w-3 ${getStatusColor(client.status)}}
+                fill="currentColor"
+              />
+              <div>
+                <h3 className="font-semibold">
+                  {client.name}
+                  {client.isMain && (
+                    <span className="ml-2 text-xs bg-blue-500 px-2 py-1 rounded">
+                      MAIN
+                    </span>
+                  )}
+                </h3>
+                <p className="text-sm text-gray-400 capitalize">{client.status}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default ClientsList
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//server.js from myrenderfarm app backend
+const session = require('express-session');
+const path = require('path');
+const express = require('express');
+const http = require('http');
+const WebSocket = require('ws');
+
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+
+const PASSWORD = 'ciccio'; // Replace with your actual password
+
+
+// Global state
+const clients = new Map(); // Stores connected clients (ws -> hostname)
+let isRendering = false; // Current rendering state
+let remainingFrames = [];
+
+// Session configuration
+app.use(session({
+    secret: 'supersecretkey', // Replace with a strong secret key
+    resave: false,
+    saveUninitialized: true,
+    cookie: { 
+        secure: false, // Set to true if using HTTPS
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    }
+}));
+
+// Middleware to serve static files from the "public" directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Middleware to parse form data
+app.use(express.urlencoded({ extended: true }));
+
+// Login route
+app.post('/login', (req, res) => {
+    if (req.body.password === PASSWORD) {
+        req.session.authenticated = true;
+        res.redirect('/');
+    } else {
+        res.send('Incorrect password');
+    }
+});
+
+// Logout route
+app.get('/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.redirect('/login');
+    });
+});
+
+// Home route (protected)
+app.get('/', (req, res) => {
+    if (!req.session.authenticated) return res.redirect('/login');
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Login page route
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+
+wss.on('connection', (ws, req) => {
+    console.log('Client connected. Headers:', req.headers);
+
+    let hostname = 'Unknown';
+
+    // Send the current global state to the new client
+    ws.send(JSON.stringify({
+        type: 'init',
+        clients: Array.from(clients.values()).map(hostname => ({ hostname, connected: true })),
+        isRendering: isRendering
+    }));
+
+    ws.on('message', (message) => {
+        try {
+            const data = JSON.parse(message.toString());
+            // console.log('Received JSON:', data);
+            if (data.type === 'register') {
+                hostname = data.hostname;
+                clients.set(ws, hostname);
+                console.log('Client registered:', hostname);
+                broadcastClientList();
+            } else if (data.type === 'startRender') {
+                isRendering = true;
+                broadcastRenderingState();
+            } else if (data.type === 'stopRender') {
+                isRendering = false;
+                broadcastRenderingState();
+            } else if (data.type === 'consoleOutput') {
+                // Broadcast the console output to all clients
+                broadcastConsoleOutput(data.message);
+            } else if (data.type === 'renderedFramesList') {
+                broadcastConsoleOutput(data.message);
+            }
+        } catch (error) {
+            console.log('Received non-JSON message:', message.toString());
+        }
+    });
+
+    ws.on('close', () => {
+        console.log('Client disconnected:', hostname);
+        clients.delete(ws);
+        broadcastClientList();
+    });
+
+    ws.on('error', (error) => {
+        console.error('WebSocket error:', error);
+    });
+});
+
+// Broadcast the client list to all connected devices
+function broadcastClientList() {
+    const clientList = Array.from(clients.entries()).map(([ws, hostname]) => ({
+        hostname,
+        connected: ws.readyState === WebSocket.OPEN
+    }));
+
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+                type: 'clientList',
+                clients: clientList
+            }));
+        }
+    });
+}
+
+// Broadcast the rendering state to all connected devices
+function broadcastRenderingState() {
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+                type: 'renderingState',
+                isRendering: isRendering
+            }));
+        }
+    });
+}
+
+// Broadcast console output to all connected devices
+function broadcastConsoleOutput(message) {
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+                type: 'consoleOutput',
+                message: message
+            }));
+        }
+    });
+}
+
+server.listen(3000, () => {
+    console.log('Server running on port 3000');
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+write a canvas in tsx or js: i need the same frontend (the UI) of ClientsList.tsx (which has hardcoded fake clients) with the perfectly working backend code that detects when real clients are online or offline. since both are perfect, i want the working frontend with the working backend
