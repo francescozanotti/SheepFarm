@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { DragDropContext, DropResult, Draggable, Droppable } from '@hello-pangea/dnd';
 import { Pause, Play, Plus } from 'lucide-react';
-import TrashIcon from './TrashIcon'; // Import the new component
+import TrashIcon from './TrashIcon';
+import { useRenderNodes } from './RenderNodesController'; // Import the global render nodes
 
 interface Block {
   id: string;
