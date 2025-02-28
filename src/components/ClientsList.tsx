@@ -10,7 +10,7 @@ const ClientsList = () => {
   const [clients, setClients] = useState<Client[]>([]);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:5173');
+    const ws = new WebSocket('wss://sheepfarm.onrender.com');
 
     ws.onopen = () => {
       console.log('Connected to WebSocket server');
