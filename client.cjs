@@ -19,8 +19,8 @@ const MAX_RECONNECT_ATTEMPTS = 10; // Maximum number of reconnection attempts
 const RECONNECT_DELAY = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); // Max delay of 30 seconds
 
 function connect() {
-    ws = new WebSocket('ws://localhost:5173');
-    // ws = new WebSocket('wss://renderfarm.onrender.com');
+    // ws = new WebSocket('ws://localhost:5173');
+    ws = new WebSocket('wss://sheepfarm.onrender.com');
 
     ws.on('open', () => {
         console.log(`${hostname} - Connected to server`);
