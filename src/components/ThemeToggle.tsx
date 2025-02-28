@@ -91,8 +91,8 @@ const ThemeToggle = ({ isDark, onToggle }: ThemeToggleProps) => {
               key={i}
               className="absolute"
               style={{
-                '--tx': `${Math.cos(i * Math.PI / 4) * 40}px`,
-                '--ty': `${Math.sin(i * Math.PI / 4) * 40}px`,
+                // '--tx': `${Math.cos(i * Math.PI / 4) * 40}px`,
+                // '--ty': `${Math.sin(i * Math.PI / 4) * 40}px`,
                 width: '12px',
                 height: '12px',
                 backgroundColor: isDark ? '#ffd700' : '#ffd700',

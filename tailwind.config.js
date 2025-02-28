@@ -12,6 +12,11 @@ export default {
         'ray-expand': 'ray-expand 2s ease-in-out infinite',
         'twinkle': 'twinkle 1.5s ease-in-out infinite',
       },
+
+      colors: {
+        tx: "#ff5733", // Set your desired color value
+      },
+
     },
   },
   plugins: [],

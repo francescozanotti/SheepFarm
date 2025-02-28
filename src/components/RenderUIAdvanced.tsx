@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { DragDropContext, DropResult, Draggable, Droppable } from '@hello-pangea/dnd';
 import { Pause, Play, Plus } from 'lucide-react';
 import TrashIcon from './TrashIcon';
-import { useRenderNodes } from './RenderNodesController'; // Import the global render nodes
+// import { useRenderNodes } from './RenderNodesController'; // Import the global render nodes
 
 interface Block {
   id: string;
@@ -42,8 +42,8 @@ const RenderUIAdvanced = () => {
     { id: 'node-3', name: 'Render Node 3', engine: 'Engine C', status: 'idle', blocks: [] },
   ]);
 
-  const [isDraggingToTrash, setIsDraggingToTrash] = useState(false);
-  const [trashScale, setTrashScale] = useState(1);
+  const [_isDraggingToTrash, setIsDraggingToTrash] = useState(false);
+  const [_trashScale, setTrashScale] = useState(1);
   const [showNewClientForm, setShowNewClientForm] = useState(false);
   const [newClientName, setNewClientName] = useState('');
   const [newClientEngine, setNewClientEngine] = useState('');
@@ -232,7 +232,7 @@ const RenderUIAdvanced = () => {
             </div>
 
             <div className="col-span-4 space-y-4">
-              {renderNodes.map((client, index) => (
+              {renderNodes.map((client, _index) => (
                 <div
                   key={client.id}
                   className="bg-white dark:bg-[#2a2a2a] p-4 rounded-lg shadow"
@@ -326,7 +326,7 @@ const RenderUIAdvanced = () => {
 
 export default RenderUIAdvanced;
 
-const DroppableSection = ({ id, title, blocks, isCompact }: { id: string; title: string; blocks: Block[]; isCompact?: boolean }) => {
+const DroppableSection = ({ id, blocks, isCompact }: { id: string; title: string; blocks: Block[]; isCompact?: boolean }) => {
   return (
     <Droppable droppableId={id}>
       {(provided, snapshot) => (
