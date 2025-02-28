@@ -1,37 +1,45 @@
-import { useEffect, useState } from 'react'
-import { Circle } from 'lucide-react'
+import { useEffect, useState } from 'react';
+import { Circle } from 'lucide-react';
 
 interface Client {
-  id: string
-  name: string
-  status: 'online' | 'offline' | 'rendering'
-  isMain: boolean
+  hostname: string;
+  connected: boolean;
 }
 
 const ClientsList = () => {
-  const [clients, setClients] = useState<Client[]>([])
+  const [clients, setClients] = useState<Client[]>([]);
 
   useEffect(() => {
-    // Simulate clients data
-    const mockClients: Client[] = [
-      { id: '1', name: 'Main Workstation', status: 'online', isMain: true },
-      { id: '2', name: 'Render Node 1', status: 'rendering', isMain: false },
-      { id: '3', name: 'Render Node 2', status: 'online', isMain: false },
-      { id: '4', name: 'Render Node 3', status: 'offline', isMain: false },
-    ]
-    setClients(mockClients)
-  }, [])
+    const ws = new WebSocket('ws://localhost:5173');
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'online':
-        return 'text-green-500'
-      case 'rendering':
-        return 'text-blue-500'
-      default:
-        return 'text-gray-500'
-    }
-  }
+    ws.onopen = () => {
+      console.log('Connected to WebSocket server');
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      if (data.type === 'clientList') {
+        setClients(data.clients);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('Disconnected from WebSocket server');
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  const getStatusColor = (connected: boolean) => {
+    return connected ? 'text-green-500' : 'text-gray-500';
+  };
 
   return (
     <div className="p-6">
@@ -39,31 +47,26 @@ const ClientsList = () => {
       <div className="grid gap-4">
         {clients.map((client) => (
           <div
-            key={client.id}
+            key={client.hostname}
             className="bg-white dark:bg-[#2a2a2a] p-4 rounded-lg flex items-center justify-between shadow-sm"
           >
             <div className="flex items-center space-x-4">
               <Circle
-                className={`h-3 w-3 ${getStatusColor(client.status)}`}
+                className={`h-3 w-3 ${getStatusColor(client.connected)}`}
                 fill="currentColor"
               />
               <div>
-                <h3 className="font-semibold">
-                  {client.name}
-                  {client.isMain && (
-                    <span className="ml-2 text-xs bg-blue-500 px-2 py-1 rounded">
-                      MAIN
-                    </span>
-                  )}
-                </h3>
-                <p className="text-sm text-gray-400 capitalize">{client.status}</p>
+                <h3 className="font-semibold">{client.hostname}</h3>
+                <p className="text-sm text-gray-400 capitalize">
+                  {client.connected ? 'online' : 'offline'}
+                </p>
               </div>
             </div>
           </div>
         ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ClientsList
+export default ClientsList;

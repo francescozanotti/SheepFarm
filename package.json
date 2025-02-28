@@ -14,10 +14,14 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hello-pangea/dnd": "^18.0.1",
+    "child_process": "^1.0.2",
+    "fs": "^0.0.1-security",
     "lucide-react": "^0.475.0",
+    "os": "^0.1.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.2.0"
+    "react-router-dom": "^7.2.0",
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.6",

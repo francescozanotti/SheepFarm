@@ -27,7 +27,7 @@ export const RenderNodesProvider = ({ children }: { children: ReactNode }) => {
   const [renderNodes, setRenderNodes] = useState<RenderNode[]>([]);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:3000');
+    const ws = new WebSocket('ws://localhost:5173');
 
     ws.onopen = () => {
       console.log('Connected to WebSocket server');
