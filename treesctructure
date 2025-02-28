@@ -1,0 +1,12 @@
+index.html
+src\App.tsx
+src\index.css
+src\main.tsx
+src\vite-env.d.ts
+src\components\ClientsList.tsx
+src\components\Dashboard.tsx
+src\components\Login.tsx
+src\components\RenderNodeProvider.tsx
+src\components\RenderUIAdvanced.tsx
+src\components\RenderUISimple.tsx
+src\components\ThemeToggle.tsx
