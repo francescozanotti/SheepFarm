@@ -20,7 +20,7 @@ const RECONNECT_DELAY = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); 
 
 function connect() {
     // ws = new WebSocket('ws://localhost:5173');
-    ws = new WebSocket('wss://sheepfarm.onrender.com');
+    ws = new WebSocket('wss://sheepfarms.onrender.com');
 
     ws.on('open', () => {
         console.log(`${hostname} - Connected to server`);
